@@ -28,7 +28,6 @@ from transformers import (
     Trainer,
     TrainerCallback,
     TrainingArguments,
-    EarlyStoppingCallback,
 )
 
 from config import (
@@ -224,7 +223,6 @@ def train_t4(cfg: TrainingConfig):
         eval_dataset=val_dataset,
         compute_metrics=lambda ep: compute_t4_metrics(ep, cfg.t4_threshold),
         callbacks=[
-            EarlyStoppingCallback(early_stopping_patience=5),
             T4SamplePredictionCallback(
                 val_json_path=os.path.join(cfg.processed_data_dir, "t4_val.json"),
                 tokenizer=tokenizer,

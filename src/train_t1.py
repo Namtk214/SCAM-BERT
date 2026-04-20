@@ -27,7 +27,6 @@ from transformers import (
     Trainer,
     TrainerCallback,
     TrainingArguments,
-    EarlyStoppingCallback,
 )
 
 from config import (
@@ -161,7 +160,6 @@ def train_t1(cfg: TrainingConfig):
         eval_dataset=val_dataset,
         compute_metrics=compute_t1_metrics,
         callbacks=[
-            EarlyStoppingCallback(early_stopping_patience=5),
             SamplePredictionCallback(
                 val_json_path=os.path.join(cfg.processed_data_dir, "t1_val.json"),
                 tokenizer=tokenizer,
