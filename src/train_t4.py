@@ -14,7 +14,9 @@ Model: AutoModelForSequenceClassification (mục 8.2)
 Mode:  Fully fine-tuning (mục 8.3)
 """
 
+import json
 import os
+import random
 import sys
 import numpy as np
 
@@ -24,6 +26,7 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     Trainer,
+    TrainerCallback,
     TrainingArguments,
     EarlyStoppingCallback,
 )
@@ -57,6 +60,50 @@ class MultiLabelTrainer(Trainer):
         loss = loss_fn(logits, labels.float())
 
         return (loss, outputs) if return_outputs else loss
+
+
+# ============================================================
+# Callback: In sample prediction sau mỗi epoch (T4 multi-label)
+# ============================================================
+class T4SamplePredictionCallback(TrainerCallback):
+    """Sau mỗi epoch, lấy 1 sample từ val set, dự đoán tactics và so với ground truth."""
+
+    def __init__(self, val_json_path: str, tokenizer, max_length: int, threshold: float = 0.5):
+        with open(val_json_path, "r", encoding="utf-8") as f:
+            self.val_samples = json.load(f)
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.threshold = threshold
+
+    def on_epoch_end(self, args, state, control, model=None, **kwargs):
+        sample = random.choice(self.val_samples)
+        true_tactics = sample["label_set"]
+        text = sample["text_segmented"]
+
+        inputs = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        ).to(model.device)
+
+        model.eval()
+        with torch.no_grad():
+            logits = model(**inputs).logits
+            probs = torch.sigmoid(logits).cpu().numpy()[0]
+
+        pred_tactics = [
+            TACTIC_LABELS[i] for i, p in enumerate(probs) if p >= self.threshold
+        ]
+
+        epoch = int(state.epoch)
+        check = "✅" if set(pred_tactics) == set(true_tactics) else "❌"
+        print(f"\n  [Epoch {epoch} Sample] Text: {text[:80]}...")
+        print(f"    True: {true_tactics}")
+        print(f"    Pred: {pred_tactics} {check}")
+        prob_str = ", ".join(f"{TACTIC_LABELS[i]}={p:.2f}" for i, p in enumerate(probs))
+        print(f"    Probs: [{prob_str}]")
 
 
 # ============================================================
@@ -175,7 +222,15 @@ def train_t4(cfg: TrainingConfig):
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=lambda ep: compute_t4_metrics(ep, cfg.t4_threshold),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+        callbacks=[
+            EarlyStoppingCallback(early_stopping_patience=5),
+            T4SamplePredictionCallback(
+                val_json_path=os.path.join(cfg.processed_data_dir, "t4_val.json"),
+                tokenizer=tokenizer,
+                max_length=cfg.max_seq_length,
+                threshold=cfg.t4_threshold,
+            ),
+        ],
     )
 
     # --------------------------------------------------------

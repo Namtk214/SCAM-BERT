@@ -13,14 +13,19 @@ Loss:  Softmax + CrossEntropy (tự động bởi Transformers)
 Mode:  Fully fine-tuning – toàn bộ tham số đều cập nhật (mục 8.3)
 """
 
+import json
 import os
+import random
 import sys
 import numpy as np
+
+import torch
 
 from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     Trainer,
+    TrainerCallback,
     TrainingArguments,
     EarlyStoppingCallback,
 )
@@ -33,6 +38,44 @@ from config import (
 )
 from dataset import ScamT1Dataset
 from metrics import compute_t1_metrics, print_t1_report
+
+
+# ============================================================
+# Callback: In sample prediction sau mỗi epoch
+# ============================================================
+class SamplePredictionCallback(TrainerCallback):
+    """Sau mỗi epoch, lấy 1 sample ngẫu nhiên từ val set để dự đoán và in kết quả."""
+
+    def __init__(self, val_json_path: str, tokenizer, max_length: int):
+        with open(val_json_path, "r", encoding="utf-8") as f:
+            self.val_samples = json.load(f)
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def on_epoch_end(self, args, state, control, model=None, **kwargs):
+        sample = random.choice(self.val_samples)
+        true_label = sample["label"]
+        text = sample["text_segmented"]
+
+        inputs = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        ).to(model.device)
+
+        model.eval()
+        with torch.no_grad():
+            logits = model(**inputs).logits
+            probs = torch.softmax(logits, dim=-1).cpu().numpy()[0]
+            pred_idx = int(np.argmax(probs))
+            pred_label = T1_LABELS[pred_idx]
+
+        epoch = int(state.epoch)
+        check = "OK" if pred_label == true_label else "SAI"
+        print(f"\n  [Epoch {epoch} Sample] Text: {text[:80]}...")
+        print(f"    True: {true_label} | Pred: {pred_label} ({probs[pred_idx]:.2%}) [{check}]")
 
 
 def train_t1(cfg: TrainingConfig):
@@ -116,7 +159,14 @@ def train_t1(cfg: TrainingConfig):
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_t1_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+        callbacks=[
+            EarlyStoppingCallback(early_stopping_patience=5),
+            SamplePredictionCallback(
+                val_json_path=os.path.join(cfg.processed_data_dir, "t1_val.json"),
+                tokenizer=tokenizer,
+                max_length=cfg.max_seq_length,
+            ),
+        ],
     )
 
     # --------------------------------------------------------
