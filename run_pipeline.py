@@ -5,11 +5,11 @@ Entry point chính – chạy toàn bộ pipeline:
   3. Train T4 (Tactic Classification)
 
 Usage:
-  python run_pipeline.py                    # Chạy tất cả
-  python run_pipeline.py --preprocess       # Chỉ preprocessing
-  python run_pipeline.py --train-t1         # Chỉ train T1
-  python run_pipeline.py --train-t4         # Chỉ train T4
-  python run_pipeline.py --small            # Batch size nhỏ (GPU yếu)
+  python run_pipeline.py --data-path /path/to/raw.json       # Chạy tất cả
+  python run_pipeline.py --data-path /path/to/raw.json --preprocess  # Chỉ preprocessing
+  python run_pipeline.py --train-t1                          # Chỉ train T1
+  python run_pipeline.py --train-t4                          # Chỉ train T4
+  python run_pipeline.py --data-path /path/to/raw.json --small       # GPU yếu
 """
 
 import argparse
@@ -43,11 +43,26 @@ def main():
         "--model", type=str, default="vinai/phobert-base",
         help="Checkpoint PhoBERT (default: vinai/phobert-base)"
     )
+    parser.add_argument(
+        "--data-path", type=str, default=None,
+        help="Đường dẫn tới file raw_conversations.json"
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default=None,
+        help="Thư mục lưu model và processed data (default: ./outputs)"
+    )
     args = parser.parse_args()
 
     # Config
     cfg = TrainingConfig()
     cfg.model_name = args.model
+
+    if args.data_path:
+        cfg.raw_data_path = args.data_path
+    if args.output_dir:
+        cfg.processed_data_dir = os.path.join(args.output_dir, "processed")
+        cfg.output_dir_t1 = os.path.join(args.output_dir, "t1_scam_detection")
+        cfg.output_dir_t4 = os.path.join(args.output_dir, "t4_tactic_classification")
 
     if args.small:
         cfg.per_device_train_batch_size = 8

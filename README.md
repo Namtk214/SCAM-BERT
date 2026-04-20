@@ -39,17 +39,17 @@ pip install -r requirements.txt
 
 ```bash
 # Chạy tất cả: preprocessing → train T1 → train T4
-python run_pipeline.py
+python run_pipeline.py --data-path /path/to/raw_conversations.json
 
 # Hoặc dùng batch nhỏ hơn (GPU yếu / debug)
-python run_pipeline.py --small
+python run_pipeline.py --data-path /path/to/raw_conversations.json --small
 ```
 
 ### Hoặc chạy từng bước riêng
 
 ```bash
-# Bước 2a: Chỉ preprocessing (tải VnCoreNLP + word segment + chia tập)
-python run_pipeline.py --preprocess
+# Bước 2a: Chỉ preprocessing
+python run_pipeline.py --data-path /path/to/raw_conversations.json --preprocess
 
 # Bước 2b: Chỉ train T1 (Scam Detection)
 python run_pipeline.py --train-t1
@@ -58,14 +58,17 @@ python run_pipeline.py --train-t1
 python run_pipeline.py --train-t4
 ```
 
-### Bước 3: Dùng model khác (tuỳ chọn)
+### Tuỳ chỉnh đường dẫn và model
 
 ```bash
-# Dùng PhoBERT large thay vì base
-python run_pipeline.py --model vinai/phobert-large
+# Chỉ định thư mục output
+python run_pipeline.py --data-path /path/to/data.json --output-dir /path/to/output
 
-# Kết hợp
-python run_pipeline.py --model vinai/phobert-large --small
+# Dùng PhoBERT large
+python run_pipeline.py --data-path /path/to/data.json --model vinai/phobert-large
+
+# Kết hợp tất cả
+python run_pipeline.py --data-path /path/to/data.json --output-dir ./results --model vinai/phobert-large --small
 ```
 
 ---
@@ -74,13 +77,15 @@ python run_pipeline.py --model vinai/phobert-large --small
 
 | Flag | Mô tả |
 |------|--------|
+| `--data-path <path>` | **(Bắt buộc khi preprocess)** Đường dẫn tới file `raw_conversations.json` |
+| `--output-dir <path>` | Thư mục lưu model và processed data (mặc định: `./outputs`) |
 | `--preprocess` | Chỉ chạy preprocessing |
 | `--train-t1` | Chỉ train T1 (Scam Detection) |
 | `--train-t4` | Chỉ train T4 (Tactic Classification) |
 | `--small` | Batch size nhỏ (8) + 10 epoch (debug / GPU yếu) |
 | `--model <name>` | Checkpoint PhoBERT (mặc định: `vinai/phobert-base`) |
 
-Không truyền flag nào → chạy tất cả (preprocessing + T1 + T4).
+Không truyền `--preprocess`, `--train-t1`, `--train-t4` → chạy tất cả.
 
 ---
 
