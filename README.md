@@ -27,160 +27,69 @@ Bert/
 
 ---
 
-## Hướng dẫn chạy trên Google Colab
+## Hướng dẫn chạy
 
-### Bước 1: Upload project lên Google Drive
+### Bước 1: Cài dependencies
 
-Upload toàn bộ thư mục `Bert/` lên Google Drive, ví dụ vào đường dẫn:
-```
-My Drive/Bert/
-```
-
-### Bước 2: Tạo notebook mới trên Colab
-
-Vào [Google Colab](https://colab.research.google.com/) → New Notebook.
-
-**Quan trọng**: Chọn GPU Runtime:
-- Menu → `Runtime` → `Change runtime type` → chọn **GPU** (T4 miễn phí là đủ)
-
-### Bước 3: Mount Google Drive & cài dependencies
-
-```python
-# Cell 1: Mount Drive
-from google.colab import drive
-drive.mount('/content/drive')
-
-# Đường dẫn project trên Drive
-PROJECT_DIR = "/content/drive/MyDrive/Bert"
+```bash
+pip install -r requirements.txt
 ```
 
-```python
-# Cell 2: Cài dependencies
-!pip install -r {PROJECT_DIR}/requirements.txt
+### Bước 2: Chạy toàn bộ pipeline (1 lệnh duy nhất)
+
+```bash
+# Chạy tất cả: preprocessing → train T1 → train T4
+python run_pipeline.py
+
+# Hoặc dùng batch nhỏ hơn (GPU yếu / debug)
+python run_pipeline.py --small
 ```
 
-```python
-# Cell 3: Thêm src vào path
-import sys
-sys.path.insert(0, f"{PROJECT_DIR}/src")
+### Hoặc chạy từng bước riêng
+
+```bash
+# Bước 2a: Chỉ preprocessing (tải VnCoreNLP + word segment + chia tập)
+python run_pipeline.py --preprocess
+
+# Bước 2b: Chỉ train T1 (Scam Detection)
+python run_pipeline.py --train-t1
+
+# Bước 2c: Chỉ train T4 (Tactic Classification)
+python run_pipeline.py --train-t4
 ```
 
-### Bước 4: Chạy Preprocessing
+### Bước 3: Dùng model khác (tuỳ chọn)
 
-```python
-# Cell 4: Preprocessing (tải VnCoreNLP + word segment + chia tập)
-import os
-os.chdir(PROJECT_DIR)
+```bash
+# Dùng PhoBERT large thay vì base
+python run_pipeline.py --model vinai/phobert-large
 
-from config import TrainingConfig
-from preprocessing import run_preprocessing
-
-cfg = TrainingConfig()
-run_preprocessing(cfg)
-```
-
-**Output kỳ vọng:**
-```
-============================================================
-PREPROCESSING PIPELINE
-============================================================
-Đang tải VnCoreNLP models vào .../vncorenlp...
-Đọc dữ liệu từ .../raw_conversations.json...
-  Tổng số conversation: 30
-  Train: 21 | Val: 4 | Test: 5
-  T1 train: 21 samples → .../t1_train.json
-  T4 train: XX samples → .../t4_train.json
-  ...
-Preprocessing hoàn tất!
-```
-
-### Bước 5: Train T1 (Scam Detection)
-
-```python
-# Cell 5: Train T1
-from train_t1 import train_t1
-
-cfg = TrainingConfig()
-# Giảm batch size & epoch cho dataset nhỏ / debug nhanh
-cfg.per_device_train_batch_size = 8
-cfg.per_device_eval_batch_size = 16
-cfg.num_train_epochs = 10
-
-trainer_t1 = train_t1(cfg)
-```
-
-### Bước 6: Train T4 (Tactic Classification)
-
-```python
-# Cell 6: Train T4
-from train_t4 import train_t4
-
-cfg = TrainingConfig()
-cfg.per_device_train_batch_size = 8
-cfg.per_device_eval_batch_size = 16
-cfg.num_train_epochs = 10
-
-trainer_t4, best_threshold = train_t4(cfg)
-print(f"Best threshold cho T4: {best_threshold:.2f}")
-```
-
-### Bước 7: Inference (thử dự đoán)
-
-```python
-# Cell 7: Test inference
-from inference import ScamDetector
-
-detector = ScamDetector(
-    t1_model_path=f"{PROJECT_DIR}/outputs/t1_scam_detection/best_model",
-    t4_model_path=f"{PROJECT_DIR}/outputs/t4_tactic_classification/best_model",
-    vncorenlp_dir=f"{PROJECT_DIR}/vncorenlp",
-    t4_threshold=best_threshold,
-)
-
-# Test với conversation mới
-messages = [
-    {"speaker_role": "normal", "text": "Alo ai đấy?"},
-    {"speaker_role": "scammer", "text": "Tôi là công an quận 1, bạn đang bị điều tra vì rửa tiền!"},
-    {"speaker_role": "normal", "text": "Hả? Tôi không biết gì hết."},
-    {"speaker_role": "scammer", "text": "Chuyển ngay 50 triệu vào tài khoản tạm giữ, nếu không sẽ bị bắt!"},
-]
-
-result = detector.analyze_conversation(messages)
-
-print(f"Kết quả T1: {result['conversation_level']['label']}")
-print(f"Confidence: {result['conversation_level']['confidence']:.2%}")
-print()
-for turn in result['turn_level_analysis']:
-    print(f"  [{turn['speaker_role']}]: {turn['text'][:60]}...")
-    if 'tactics' in turn:
-        print(f"    → Tactics: {turn['tactics']['predicted_tactics']}")
+# Kết hợp
+python run_pipeline.py --model vinai/phobert-large --small
 ```
 
 ---
 
-## Chạy nhanh 1 lệnh (toàn bộ pipeline)
+## Flag dòng lệnh
 
-Nếu muốn chạy tất cả trong 1 cell:
+| Flag | Mô tả |
+|------|--------|
+| `--preprocess` | Chỉ chạy preprocessing |
+| `--train-t1` | Chỉ train T1 (Scam Detection) |
+| `--train-t4` | Chỉ train T4 (Tactic Classification) |
+| `--small` | Batch size nhỏ (8) + 10 epoch (debug / GPU yếu) |
+| `--model <name>` | Checkpoint PhoBERT (mặc định: `vinai/phobert-base`) |
 
-```python
-# Chạy toàn bộ: preprocessing → train T1 → train T4
-import os, sys
-os.chdir("/content/drive/MyDrive/Bert")
-sys.path.insert(0, "src")
-
-!python run_pipeline.py --small
-```
-
-Flag `--small` sẽ dùng batch_size=8 và 10 epochs (phù hợp debug/dataset nhỏ).
+Không truyền flag nào → chạy tất cả (preprocessing + T1 + T4).
 
 ---
 
 ## Cấu hình
 
-Tất cả hyperparameters được định nghĩa trong `src/config.py`:
+Tất cả hyperparameters định nghĩa trong `src/config.py`:
 
-| Tham số | Giá trị mặc định | Mô tả |
-|---------|-------------------|-------|
+| Tham số | Mặc định | Mô tả |
+|---------|----------|-------|
 | `model_name` | `vinai/phobert-base` | Checkpoint PhoBERT |
 | `max_seq_length` | 256 | Độ dài tối đa input (theo paper) |
 | `learning_rate` | 1e-5 | Learning rate (theo paper) |
@@ -189,11 +98,6 @@ Tất cả hyperparameters được định nghĩa trong `src/config.py`:
 | `val_ratio` | 0.15 | Tỷ lệ validation |
 | `test_ratio` | 0.15 | Tỷ lệ test |
 | `t4_threshold` | 0.5 | Ngưỡng sigmoid mặc định cho T4 |
-
-Có thể dùng `vinai/phobert-large` nếu có đủ GPU:
-```python
-cfg.model_name = "vinai/phobert-large"
-```
 
 ---
 
