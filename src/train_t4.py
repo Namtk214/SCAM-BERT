@@ -39,6 +39,7 @@ from config import (
 )
 from dataset import ScamT4Dataset
 from metrics import compute_t4_metrics, print_t4_report
+from model_utils import load_phobert_for_classification
 
 
 # ============================================================
@@ -178,8 +179,8 @@ def train_t4(cfg: TrainingConfig):
     # --------------------------------------------------------
     num_labels = len(TACTIC_LABELS)
     print(f"Loading model: {cfg.model_name} (num_labels={num_labels})")
-    model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.model_name,
+    model = load_phobert_for_classification(
+        model_name=cfg.model_name,
         num_labels=num_labels,
         id2label=T4_ID2LABEL,
         label2id=T4_LABEL2ID,

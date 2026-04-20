@@ -38,6 +38,7 @@ from config import (
 )
 from dataset import ScamT1Dataset
 from metrics import compute_t1_metrics, print_t1_report
+from model_utils import load_phobert_for_classification
 
 
 # ============================================================
@@ -115,8 +116,8 @@ def train_t1(cfg: TrainingConfig):
     # 3. Load model – fully fine-tuning (mục 8.3)
     # --------------------------------------------------------
     print(f"Loading model: {cfg.model_name}")
-    model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.model_name,
+    model = load_phobert_for_classification(
+        model_name=cfg.model_name,
         num_labels=len(T1_LABELS),
         id2label=T1_ID2LABEL,
         label2id=T1_LABEL2ID,
