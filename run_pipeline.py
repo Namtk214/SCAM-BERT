@@ -10,6 +10,7 @@ Usage:
   python run_pipeline.py --train-t1                          # Chỉ train T1
   python run_pipeline.py --train-t4                          # Chỉ train T4
   python run_pipeline.py --data-path /path/to/raw.json --small       # GPU yếu
+  python run_pipeline.py --data-path /path/to/raw.json --visualize   # Visualize data
 """
 
 import argparse
@@ -38,6 +39,10 @@ def main():
     parser.add_argument(
         "--small", action="store_true",
         help="Dùng batch size nhỏ và ít epoch hơn (cho GPU yếu / debug)"
+    )
+    parser.add_argument(
+        "--visualize", action="store_true",
+        help="Visualize phân bố dataset (lưu biểu đồ vào figures/)"
     )
     parser.add_argument(
         "--model", type=str, default="vinai/phobert-base",
@@ -69,8 +74,16 @@ def main():
         cfg.per_device_eval_batch_size = 16
         cfg.num_train_epochs = 10
 
+    # Visualize
+    if args.visualize:
+        from visualize import run_visualization
+        save_dir = os.path.join(args.output_dir, "figures") if args.output_dir else None
+        run_visualization(cfg.raw_data_path, save_dir)
+        if not (args.preprocess or args.train_t1 or args.train_t4):
+            return
+
     # Nếu không chọn gì → chạy tất cả
-    run_all = not (args.preprocess or args.train_t1 or args.train_t4)
+    run_all = not (args.preprocess or args.train_t1 or args.train_t4 or args.visualize)
 
     # Step 1: Preprocessing
     if run_all or args.preprocess:
