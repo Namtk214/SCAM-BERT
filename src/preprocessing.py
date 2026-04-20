@@ -228,8 +228,9 @@ def run_preprocessing(cfg: TrainingConfig):
     print("=" * 60)
 
     # Tải VnCoreNLP model nếu chưa có
-    if not os.path.exists(cfg.vncorenlp_dir):
+    if not os.path.exists(os.path.join(cfg.vncorenlp_dir, "VnCoreNLP-1.2.jar")):
         print(f"Đang tải VnCoreNLP models vào {cfg.vncorenlp_dir}...")
+        os.makedirs(cfg.vncorenlp_dir, exist_ok=True)
         py_vncorenlp.download_model(save_dir=cfg.vncorenlp_dir)
     segmenter = WordSegmenter(cfg.vncorenlp_dir)
 
