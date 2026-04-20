@@ -71,6 +71,27 @@ python run_pipeline.py --data-path /path/to/data.json --model vinai/phobert-larg
 python run_pipeline.py --data-path /path/to/data.json --output-dir ./results --model vinai/phobert-large --small
 ```
 
+### Chạy chức năng Trực quan hóa dữ liệu (Visualize)
+
+Pipeline hỗ trợ trích xuất thống kê và vẽ biểu đồ về các đặc trưng của dataset (phân bố nhãn, số lượng tactic, số turn...). 
+Các biểu đồ sẽ được lưu dưới dạng file `.png` vào thư mục `figures/` bên trong đườg dẫn xuất dữ liệu (`output-dir`).
+
+```bash
+# Chỉ chạy visualize (không train)
+python run_pipeline.py --data-path /path/to/raw_conversations.json --visualize
+
+# Kết hợp preprocess + train nhỏ + visualize
+python run_pipeline.py --data-path /path/to/raw_conversations.json --visualize --small
+```
+
+Danh sách các biểu đồ sinh ra:
+1. `t1_label_distribution.png`: Phân bố SCAM / AMBIGUOUS / LEGIT.
+2. `t4_tactic_distribution.png`: Tần suất xuất hiện của Tactic (T4).
+3. `t4_cooccurrence.png`: Heatmap về việc nhãn T4 nào hay đi cùng nhau.
+4. `turn_distribution.png`: Histogram số turn trên mỗi conversation.
+5. `tactics_per_turn.png`: Histogram số tactic trung bình / scammer turn.
+6. `t1_vs_turns.png`: So sánh độ rộng cực tiểu theo độ dài turn.
+
 ---
 
 ## Flag dòng lệnh
@@ -80,6 +101,7 @@ python run_pipeline.py --data-path /path/to/data.json --output-dir ./results --m
 | `--data-path <path>` | **(Bắt buộc khi preprocess)** Đường dẫn tới file `raw_conversations.json` |
 | `--output-dir <path>` | Thư mục lưu model và processed data (mặc định: `./outputs`) |
 | `--preprocess` | Chỉ chạy preprocessing |
+| `--visualize` | Trực quan hóa thống kê dataset (lưu biểu đồ vào thư mục `figures/`) |
 | `--train-t1` | Chỉ train T1 (Scam Detection) |
 | `--train-t4` | Chỉ train T4 (Tactic Classification) |
 | `--small` | Batch size nhỏ (8) + 10 epoch (debug / GPU yếu) |
