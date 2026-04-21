@@ -128,25 +128,6 @@ Tất cả hyperparameters định nghĩa trong `src/config.py`:
 
 ---
 
-## Taxonomy nhãn
-
-### T1 – Scam Detection (single-label, 3 class)
-| Label | Mô tả |
-|-------|--------|
-| `SCAM` | Cuộc hội thoại lừa đảo |
-| `AMBIGUOUS` | Mơ hồ, chưa đủ kết luận |
-| `LEGIT` | Hợp pháp, bình thường |
-
-### T4 – Tactic Classification (multi-label, 5 tactic)
-| Label | Mô tả |
-|-------|--------|
-| `SA_AUTH` | Giả mạo thẩm quyền (công an, ngân hàng, ...) |
-| `SA_THREAT` | Đe dọa (bắt giữ, phạt, ...) |
-| `SA_URGENCY` | Tạo cảm giác gấp (hạn chót, ngay lập tức, ...) |
-| `SA_REASSURE` | Trấn an (yên tâm, hoàn tiền, ...) |
-| `SA_DEFLECT` | Lảng tránh / chuyển hướng câu hỏi |
-
----
 
 ## Metrics đánh giá
 
