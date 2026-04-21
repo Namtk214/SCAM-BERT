@@ -18,11 +18,25 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 T1_LABELS: List[str] = ["SCAM", "AMBIGUOUS", "LEGIT"]
 
 TACTIC_LABELS: List[str] = [
-    "SA_AUTH",
-    "SA_THREAT",
-    "SA_URGENCY",
-    "SA_REASSURE",
-    "SA_DEFLECT",
+    "AUTHORITY",
+    "SCARCITY",
+    "SOCIAL_PROOF",
+    "LIKING",
+    "RECIPROCITY",
+    "COMMITMENT",
+    "THREAT_LEGAL",
+    "THREAT_FINANCIAL",
+    "THREAT_SOCIAL",
+    "ISOLATION",
+    "OVERWHELM",
+    "HELP",
+    "TRUST_BUILD_REVEAL",
+    "CONFESSION_ELICIT",
+    "REFRAME",
+    "INFO_REQUEST",
+    "ACTION_REQUEST",
+    "DEFLECT_EXTERNAL",
+    "DEFLECT_MINIMIZE",
 ]
 
 T1_LABEL2ID = {label: idx for idx, label in enumerate(T1_LABELS)}
